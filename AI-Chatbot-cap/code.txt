@@ -1,0 +1,159 @@
+
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem; // New Input System
+
+public class SnakeGame : MonoBehaviour
+{
+    public GameObject snakePrefab; // Green square prefab
+    public GameObject applePrefab; // Red circle prefab
+    public BoxCollider2D gridArea; // Defines boundaries
+
+    private List<Transform> snakeSegments = new();
+    private Vector2Int direction = Vector2Int.right;
+    private Vector2Int nextDirection = Vector2Int.right;
+    private float moveTimer;
+    private const float StepTime = 0.2f;
+    private GameObject apple;
+
+    void Start()
+    {
+        ResetGame();
+    }
+
+    void Update()
+    {
+        ReadInput();
+        moveTimer += Time.deltaTime;
+
+        if (moveTimer >= StepTime)
+        {
+            moveTimer = 0f;
+            Move();
+        }
+    }
+
+    private void ReadInput()
+    {
+        var kb = Keyboard.current;
+        if (kb == null) return;
+
+        if ((kb.upArrowKey.wasPressedThisFrame ||
+             kb.wKey.wasPressedThisFrame) &&
+             direction != Vector2Int.down)
+            nextDirection = Vector2Int.up;
+
+        if ((kb.downArrowKey.wasPressedThisFrame ||
+             kb.sKey.wasPressedThisFrame) &&
+             direction != Vector2Int.up)
+            nextDirection = Vector2Int.down;
+
+        if ((kb.leftArrowKey.wasPressedThisFrame ||
+             kb.aKey.wasPressedThisFrame) &&
+             direction != Vector2Int.right)
+            nextDirection = Vector2Int.left;
+
+        if ((kb.rightArrowKey.wasPressedThisFrame ||
+             kb.dKey.wasPressedThisFrame) &&
+             direction != Vector2Int.left)
+            nextDirection = Vector2Int.right;
+    }
+
+    private void Move()
+    {
+        direction = nextDirection;
+
+        Vector2Int newPos =
+            Vector2Int.RoundToInt(snakeSegments[0].position)
+            + direction;
+
+        // Check boundaries
+        Bounds bounds = gridArea.bounds;
+
+        if (newPos.x < bounds.min.x || newPos.x > bounds.max.x ||
+            newPos.y < bounds.min.y || newPos.y > bounds.max.y)
+        {
+            ResetGame();
+            return;
+        }
+
+        // Check self collision
+        foreach (var seg in snakeSegments)
+        {
+            if (Vector2Int.RoundToInt(seg.position) == newPos)
+            {
+                ResetGame();
+                return;
+            }
+        }
+
+        // Move body
+        for (int i = snakeSegments.Count - 1; i > 0; i--)
+        {
+            snakeSegments[i].position = snakeSegments[i - 1].position;
+        }
+
+        snakeSegments[0].position =
+            new Vector3(newPos.x, newPos.y, 0);
+
+        // Apple check
+        if (apple != null &&
+            Vector2Int.RoundToInt(apple.transform.position) == newPos)
+        {
+            Grow();
+            SpawnApple();
+        }
+    }
+
+    private void Grow()
+    {
+        Transform tail = snakeSegments[snakeSegments.Count - 1];
+
+        GameObject newSegment = Instantiate(
+            snakePrefab, tail.position, Quaternion.identity);
+
+        snakeSegments.Add(newSegment.transform);
+    }
+
+    private void SpawnApple()
+    {
+        if (apple != null)
+            Destroy(apple);
+
+        Bounds bounds = gridArea.bounds;
+        Vector2Int pos;
+
+        do
+        {
+            pos = new Vector2Int(
+                Mathf.RoundToInt(Random.Range(bounds.min.x, bounds.max.x)),
+                Mathf.RoundToInt(Random.Range(bounds.min.y, bounds.max.y))
+            );
+        }
+        while (snakeSegments.Exists(
+            seg => Vector2Int.RoundToInt(seg.position) == pos));
+
+        apple = Instantiate(
+            applePrefab,
+            new Vector3(pos.x, pos.y, 0),
+            Quaternion.identity);
+    }
+
+    private void ResetGame()
+    {
+        foreach (var seg in snakeSegments)
+            Destroy(seg.gameObject);
+
+        snakeSegments.Clear();
+
+        GameObject head = Instantiate(
+            snakePrefab, Vector3.zero, Quaternion.identity);
+
+        snakeSegments.Add(head.transform);
+
+        direction = Vector2Int.right;
+        nextDirection = Vector2Int.right;
+
+        SpawnApple();
+    }
+}

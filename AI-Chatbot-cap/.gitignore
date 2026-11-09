@@ -1,0 +1,6 @@
+node_modules/
+backend/node_modules/
+backend/.env
+*.log
+backend/firebase-service-account*.json
+For Firebase JS SDK v7.20.0 and la.txt

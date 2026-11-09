@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: legal-info-ai
+    runtime: node
+    plan: free
+    buildCommand: npm --prefix backend ci
+    startCommand: npm --prefix backend start
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        value: ai-legal-info
